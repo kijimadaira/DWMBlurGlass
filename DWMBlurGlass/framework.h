@@ -18,6 +18,8 @@
 #pragma once
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <Mui.h>
+#include <vector>
+#include <functional>
+#include <thread>
 
 #define _MNAME(x) control->GetName() == x

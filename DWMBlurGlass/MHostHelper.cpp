@@ -18,7 +18,6 @@
 #include "MHostHelper.h"
 #include "Helper/SymbolResolver.h"
 #include "Helper/Helper.h"
-#include "UIManager.h"
 #include "Common.h"
 #include "../DWMBlurGlassExt/Common/DefFunctionList.h"
 
@@ -138,7 +137,7 @@ namespace MDWMBlurGlass
 	{
 		if(!LoadSymbolOffset())
 		{
-			err = GetBaseLanguageString(L"symloadfail");
+			err = L"symloadfail";
 			return false;
 		}
 		const bool ret = Inject(GetProcessId(L"dwm.exe"), Utils::GetCurrentDir() + L"\\DWMBlurGlassExt.dll", err);
@@ -151,11 +150,11 @@ namespace MDWMBlurGlass
 		return ret;
 	}
 
-	bool LoadDWMExtension(std::wstring& err, Mui::XML::MuiXML* ui)
+	bool LoadDWMExtension(std::wstring& err)
 	{
 		if (!LoadSymbolOffset())
 		{
-			err = ui->GetStringValue(L"symloadfail");
+			err = L"symloadfail";
 			return false;
 		}
 		return Inject(GetProcessId(L"dwm.exe"), Utils::GetCurrentDir() + L"\\DWMBlurGlassExt.dll", err);

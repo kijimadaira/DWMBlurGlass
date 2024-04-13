@@ -27,7 +27,7 @@ namespace MDWMBlurGlass
 
 	bool LoadDWMExtensionBase(std::wstring& err);
 
-	bool LoadDWMExtension(std::wstring& err, Mui::XML::MuiXML* ui);
+	bool LoadDWMExtension(std::wstring& err);
 
 	bool ShutdownDWMExtension(std::wstring& err);
 

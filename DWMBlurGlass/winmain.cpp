@@ -16,16 +16,10 @@
  * If not, see <https://www.gnu.org/licenses/lgpl-3.0.html>.
 */
 #include "framework.h"
-#include "UIManager.h"
-#include "MainWindow.h"
-#include "MDcompRender.h"
 #include "Helper/Helper.h"
 #include "MHostHelper.h"
-#include "Extend/ColorDisplay.h"
 #include <Knownfolders.h>
 #include <Shlobj.h>
-
-using namespace Mui;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -39,14 +33,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return 0;
 #endif
 
-	if (!MDWMBlurGlass::LoadLanguageFileList() 
-		|| (!MDWMBlurGlass::LoadBaseLanguageString(MDWMBlurGlass::GetSystemLocalName())
-		&& !MDWMBlurGlass::LoadBaseLanguageString(L"en-US")))
-	{
-		MessageBoxW(nullptr, L"初始化失败: 没有有效的语言文件 (Initialization failed: No valid language file).", L"error", MB_ICONERROR);
-		return 0;
-	}
-
 	PWSTR shfolder = nullptr;
 	if (SHGetKnownFolderPath(FOLDERID_Profile, 0, nullptr, &shfolder) == S_OK)
 	{
@@ -55,21 +41,129 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		std::wstring curpath = MDWMBlurGlass::Utils::GetCurrentDir();
 		if (curpath.length() >= path.length() && curpath.substr(0, path.length()) == path)
 		{
-			MessageBoxW(nullptr,
-				Helper::M_ReplaceString(MDWMBlurGlass::GetBaseLanguageString(L"initfail0"), L"{path}", curpath).c_str(),
-				L"waring", MB_ICONWARNING | MB_TOPMOST);
+			MessageBoxW(nullptr, L"Running in sandbox!", L"DWMBlurGlass: warning", MB_ICONWARNING | MB_TOPMOST);
 			return false;
 		}
+	}
+
+	HRESULT hr = CoInitialize(nullptr);
+	if (FAILED(hr))
+	{
+		MessageBoxW(nullptr, L"CoInitialize failed!", L"DWMBlurGlass", MB_ICONERROR);
+		return 0;
 	}
 
 	if(lpCmdLine && _wcsicmp(lpCmdLine, L"loaddll") == 0)
 	{
 		std::wstring err;
 		if (!MDWMBlurGlass::LoadDWMExtensionBase(err))
-			MessageBoxW(nullptr, err.c_str(), L"DWMBlurGlass Error", MB_ICONERROR);
+			MessageBoxW(nullptr, err.c_str(), L"DWMBlurGlass: loaddll error", MB_ICONERROR);
+		return 0;
+	}
+	
+	if (lpCmdLine && _wcsicmp(lpCmdLine, L"unloaddll") == 0)
+	{
+		std::wstring err;
+		if (!MDWMBlurGlass::ShutdownDWMExtension(err))
+			MessageBoxW(nullptr, err.c_str(), L"DWMBlurGlass: unloaddll error", MB_ICONERROR);
 		return 0;
 	}
 
+	if (lpCmdLine && _wcsicmp(lpCmdLine, L"install") == 0)
+	{
+		std::wstring errinfo;
+		
+		if (MDWMBlurGlass::IsInstallTasks())
+			return 0;
+
+		if (MDWMBlurGlass::InstallScheduledTasks(errinfo)) {
+			std::wstring err;
+			bool symbolState = MDWMBlurGlass::MHostGetSymbolState();
+			if (symbolState && !MDWMBlurGlass::LoadDWMExtension(err))
+			{
+				MessageBoxW(nullptr, (L"Failed to load component! Error message: " + err).c_str(), L"DWMBlurGlass: install error", MB_ICONERROR);
+				return 0;
+			}
+
+			if (symbolState) {
+				PostMessageW(FindWindowW(L"Dwm", nullptr), WM_THEMECHANGED, 0, 0);
+        		InvalidateRect(nullptr, nullptr, FALSE);
+			}
+
+			MessageBoxW(nullptr, 
+				symbolState ? L"Install successfully!" : L"Install successfully!" 
+				"But you haven't downloaded a valid symbol file yet, download it from the \"Symbols\" page to make DWMBlurGlass work!", 
+				L"DWMBlurGlass: install", 
+				MB_ICONINFORMATION);
+		}
+		else
+		{
+			MessageBoxW(nullptr, (L"Install failed! Error message: " + errinfo).c_str(), L"DWMBlurGlass: install error", MB_ICONERROR);
+		}
+		return 0;
+	}
+
+	if (lpCmdLine && _wcsicmp(lpCmdLine, L"uninstall") == 0)
+	{
+		std::wstring errinfo;
+		MDWMBlurGlass::ShutdownDWMExtension(errinfo);
+
+		if (!MDWMBlurGlass::IsInstallTasks())
+			return 0;
+
+		if (MDWMBlurGlass::DeleteScheduledTasks(errinfo)) 
+		{
+			MessageBoxW(nullptr, L"Uninstall successfully.", L"DWMBlurGlass: uninstall success", MB_ICONINFORMATION);
+		} 
+		else
+		{ 
+			MessageBoxW(nullptr, (L"Uninstall failed! Error message: " + errinfo).c_str(), L"DWMBlurGlass: uninstall error", MB_ICONERROR);
+		}
+		return 0;
+	}
+
+	if (lpCmdLine && _wcsicmp(lpCmdLine, L"downloadsym") == 0)
+	{
+		if (MDWMBlurGlass::MHostGetSymbolState())
+			return 0;
+
+		if (!MDWMBlurGlass::MHostDownloadSymbol()) 
+		{
+			MessageBoxW(nullptr,
+				L"Download failed! Unable to download symbol files from \"msdl.microsoft.com\".",
+				L"DWMBlurGlass: Download",
+				MB_ICONERROR
+			);
+			return 0;
+		}
+                        
+        if (MDWMBlurGlass::IsInstallTasks())
+        {
+            std::wstring err;
+			if (!MDWMBlurGlass::LoadDWMExtension(err))
+			{
+				MessageBoxW(nullptr, (L"Failed to load component! Error message: " + err).c_str(), L"Error", MB_ICONERROR);
+			}
+			else
+			{
+				PostMessageW(FindWindowW(L"Dwm", nullptr), WM_THEMECHANGED, 0, 0);
+				InvalidateRect(nullptr, nullptr, FALSE);
+			}
+        }
+	}
+
+	if (lpCmdLine && _wcsicmp(lpCmdLine, L"refresh") == 0)
+	{
+		MDWMBlurGlass::MHostNotify(MDWMBlurGlass::MHostNotifyType::Refresh);
+		if (MDWMBlurGlass::IsInstallTasks())
+		{
+			PostMessageW(FindWindowW(L"Dwm", nullptr), WM_THEMECHANGED, 0, 0);
+			InvalidateRect(nullptr, nullptr, FALSE);
+		}
+		return 0;
+	}
+
+	/*
 	HANDLE hObject = CreateMutexW(nullptr, FALSE, L"_DWMBlurGlass_");
 	if (GetLastError() == ERROR_ALREADY_EXISTS)
 	{
@@ -78,57 +172,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 	if (hObject)
 		ReleaseMutex(hObject);
-
-	//初始化界面库 全局仅有一个MiaoUI类
-	MiaoUI engine;
-	std::wstring err;
-	auto render = new MDWMBlurGlass::MRender_DComp();
-
-	if (!Render::InitDirect2D(err, -1) || !engine.InitEngine(err, MiaoUI::Render::Custom, _m_ptrv(render)))
-	{
-		MessageBoxW(nullptr, (MDWMBlurGlass::GetBaseLanguageString(L"inituifail0") + err).c_str(), L"error", MB_ICONERROR);
-		delete render;
-		return 0;
-	}
-
-	auto context = engine.CreateWindowCtx({ 0,0,500,680 }, MWindowType::NoTitleBar,
-		L"DWMBlurGlass " + MDWMBlurGlass::g_vernum, true, true, 0, WS_EX_NOREDIRECTIONBITMAP);
-	if(!context)
-	{
-		MessageBoxW(nullptr, MDWMBlurGlass::GetBaseLanguageString(L"inituifail1").c_str(), L"error", MB_ICONERROR);
-		delete render;
-		return 0;
-	}
-
-	ColorDisplay::Register();
-
-	context->SetEventCallback(MDWMBlurGlass::MainWindow_EventProc);
-	context->SetEventSourceCallback(MDWMBlurGlass::MainWindow_SrcEventProc);
-	if(!context->InitWindow(MDWMBlurGlass::MainWindow_InitWindow, false))
-	{
-		delete context;
-		delete render;
-		MessageBoxW(nullptr, MDWMBlurGlass::GetBaseLanguageString(L"inituifail2").c_str(), L"error", MB_ICONERROR);
-		return 0;
-	}
-
-	MDWMBlurGlass::ClearBaseLanguage();
-
-	render->InitBackdrop();
-
-	context->Base()->SetResMode(true);
-	//context->Base()->ShowDebugRect(true);
-	context->Base()->CenterWindow();
-	context->Base()->ShowWindow(true);
-
-
-	context->EventLoop();
-
-	MDWMBlurGlass::MainWindow_Destroy();
-
-	Render::UninitDirect2D();
-
-	engine.UnInitEngine();
+	*/
 
 	return 0;
 }
