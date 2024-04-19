@@ -155,34 +155,17 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Extend\ColorDisplay.h" />
-    <ClInclude Include="Extend\ColorPickerDlg.h" />
-    <ClInclude Include="Extend\Dialog.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Helper\Helper.h" />
     <ClInclude Include="Helper\SymbolResolver.h" />
     <ClInclude Include="Helper\wil.h" />
-    <ClInclude Include="MDcompRender.h" />
-    <ClInclude Include="MainWindow.h" />
     <ClInclude Include="MHostHelper.h" />
-    <ClInclude Include="Page\MainPage.h" />
-    <ClInclude Include="pugixml\pugiconfig.hpp" />
-    <ClInclude Include="pugixml\pugixml.hpp" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="UIManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Extend\ColorDisplay.cpp" />
-    <ClCompile Include="Extend\ColorPickerDlg.cpp" />
-    <ClCompile Include="Extend\Dialog.cpp" />
     <ClCompile Include="Helper\Helper.cpp" />
     <ClCompile Include="Helper\SymbolResolver.cpp" />
-    <ClCompile Include="MDcompRender.cpp" />
-    <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="MHostHelper.cpp" />
-    <ClCompile Include="Page\MainPage.cpp" />
-    <ClCompile Include="pugixml\pugixml.cpp" />
-    <ClCompile Include="UIManager.cpp" />
     <ClCompile Include="winmain.cpp" />
   </ItemGroup>
   <ItemGroup>
